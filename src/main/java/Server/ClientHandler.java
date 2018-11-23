@@ -1,3 +1,5 @@
+package Server;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,14 +10,12 @@ import java.net.Socket;
 
 public class ClientHandler extends Thread {
 
-    private Socket socket;
     private DataInputStream dis;
     private DataOutputStream dos;
     private final Logger logger = LoggerFactory.getLogger(ClientHandler.class);
     private String name;
 
     ClientHandler(Socket socket) throws IOException {
-        this.socket = socket;
         dis = new DataInputStream(socket.getInputStream());
         dos = new DataOutputStream(socket.getOutputStream());
 
@@ -34,6 +34,14 @@ public class ClientHandler extends Thread {
                     name = msg;
                 else
                     logger.info(String.format("Received message from user with name %s", name), msg);
+
+                if (msg.equals("exit")) {
+                    dos.close();
+                    dis.close();
+                    Thread.currentThread().interrupt();
+                    Server.clientHandlers.remove(this);
+                    break;
+                }
 
                 sendMessageToOthers(name + ": " + msg);
 
