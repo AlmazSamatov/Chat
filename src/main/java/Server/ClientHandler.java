@@ -10,17 +10,19 @@ import java.net.Socket;
 
 public class ClientHandler extends Thread {
 
-    private DataInputStream dis;
-    private DataOutputStream dos;
+    private Socket socket;
+    private DataInputStream dataInputStream;
+    private DataOutputStream dataOutputStream;
     private final Logger logger = LoggerFactory.getLogger(ClientHandler.class);
     private String name;
 
     ClientHandler(Socket socket) throws IOException {
-        dis = new DataInputStream(socket.getInputStream());
-        dos = new DataOutputStream(socket.getOutputStream());
+        this.socket = socket;
+        dataInputStream = new DataInputStream(socket.getInputStream());
+        dataOutputStream = new DataOutputStream(socket.getOutputStream());
 
         // Ask user to enter it's name
-        dos.writeUTF("Enter your name, please:");
+        dataOutputStream.writeUTF("Enter your name, please:");
     }
 
     @Override
@@ -28,26 +30,34 @@ public class ClientHandler extends Thread {
         while (!Thread.currentThread().isInterrupted()) {
 
             try {
-                String msg = dis.readUTF();
+                String msg = dataInputStream.readUTF();
 
-                if (name == null)
+                if (name == null) {
                     name = msg;
-                else
+                    dataOutputStream.writeUTF("Now you can write messages here.\n");
+                } else {
                     logger.info(String.format("Received message from user with name %s", name), msg);
 
-                if (msg.equals("exit")) {
-                    dos.close();
-                    dis.close();
-                    Thread.currentThread().interrupt();
-                    Server.clientHandlers.remove(this);
-                    break;
-                }
+                    if (msg.equals("exit")) {
+                        Thread.currentThread().interrupt();
+                        Server.clientHandlers.remove(this);
+                        break;
+                    }
 
-                sendMessageToOthers(name + ": " + msg);
+                    sendMessageToOthers(name + ": " + msg);
+                }
 
             } catch (IOException e) {
                 logger.error("Can not read message from user", e);
             }
+        }
+
+        try {
+            dataInputStream.close();
+            dataOutputStream.close();
+            socket.close();
+        } catch (IOException e) {
+            logger.error("Error happened while closing resources", e);
         }
 
     }
@@ -65,6 +75,6 @@ public class ClientHandler extends Thread {
     }
 
     private void writeMessage(String msg) throws IOException {
-        dos.writeUTF(msg);
+        dataOutputStream.writeUTF(msg);
     }
 }
