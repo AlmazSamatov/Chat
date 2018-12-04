@@ -7,6 +7,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Queue;
 
 public class ClientHandler extends Thread {
 
@@ -15,8 +16,10 @@ public class ClientHandler extends Thread {
     private DataOutputStream dataOutputStream;
     private final Logger logger = LoggerFactory.getLogger(ClientHandler.class);
     private String name;
+    private int number;
 
-    ClientHandler(Socket socket) throws IOException {
+    ClientHandler(Socket socket, int number) throws IOException {
+        this.number = number;
         this.socket = socket;
         dataInputStream = new DataInputStream(socket.getInputStream());
         dataOutputStream = new DataOutputStream(socket.getOutputStream());
@@ -60,6 +63,14 @@ public class ClientHandler extends Thread {
             logger.error("Error happened while closing resources", e);
         }
 
+    }
+
+    // get name of user or number of user if name is null
+    public String getNameOrNumber() {
+        if (name == null)
+            return String.valueOf(number);
+        else
+            return name;
     }
 
     private void sendMessageToOthers(String msg) {
