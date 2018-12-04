@@ -33,7 +33,7 @@ public class Server {
 
             Socket socket = serverSocket.accept();
 
-            logger.info("New user request received: ", socket);
+            logger.info("New user request received: " + socket);
 
             ClientHandler clientHandler = new ClientHandler(socket, clientHandlers.size() + 1);
 

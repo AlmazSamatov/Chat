@@ -32,14 +32,14 @@ public class ClientHandler extends Thread {
 
         // run thread, which sends messages to current user
         sendMessagesToClient = new SendMessagesToClient();
-        sendMessagesToClient.run();
+        sendMessagesToClient.start();
     }
 
     @Override
     public void run() {
-        while (!Thread.currentThread().isInterrupted()) {
 
-            try {
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
                 String msg = dataInputStream.readUTF();
 
                 if (name == null) {
@@ -57,10 +57,9 @@ public class ClientHandler extends Thread {
 
                     sendMessageToOthers(name + ": " + msg);
                 }
-
-            } catch (IOException e) {
-                logger.error("Can not read message from user", e);
             }
+        } catch (IOException e) {
+            logger.error("Can not read message from user", e);
         }
 
         try {
@@ -106,7 +105,7 @@ public class ClientHandler extends Thread {
                     Thread.sleep(500);
 
                     if (!messagesToSent.isEmpty())
-                        dataOutputStream.writeUTF(messagesToSent.poll());
+                        dataOutputStream.writeUTF(messagesToSent.poll() + '\n');
 
                 }
             } catch (Exception e) {

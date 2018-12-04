@@ -47,21 +47,23 @@ public class Client {
         @Override
         public void run() {
 
-            while (!Thread.currentThread().isInterrupted()) {
-                String msg = scanner.nextLine();
+            try {
 
-                try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    String msg = scanner.nextLine();
+
                     dataOutputStream.writeUTF(msg);
-                } catch (IOException e) {
-                    String errorMessage = "Can not send message to server. Most probably, this is network error.";
-                    logger.error(errorMessage, e);
-                    try {
-                        outputWriter.write(errorMessage);
-                    } catch (IOException e1) {
-                        logger.error("Error happened while closing output writer", e);
-                    }
-                    Thread.currentThread().interrupt();
                 }
+
+            } catch (IOException e) {
+                String errorMessage = "Can not send message to server. Most probably, this is network error.";
+                logger.error(errorMessage, e);
+                try {
+                    outputWriter.write(errorMessage);
+                } catch (IOException e1) {
+                    logger.error("Error happened while closing output writer", e);
+                }
+                Thread.currentThread().interrupt();
             }
 
             // close resources
@@ -88,21 +90,23 @@ public class Client {
         @Override
         public void run() {
 
-            while (!Thread.currentThread().isInterrupted()) {
-
-                try {
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
                     String msg = dataInputStream.readUTF();
+
                     outputWriter.write(msg);
-                } catch (IOException e) {
-                    String errorMessage = "Can not read messages from server. Most probably, this is network error.";
-                    logger.error(errorMessage, e);
-                    try {
-                        outputWriter.write(errorMessage);
-                    } catch (IOException e1) {
-                        logger.error("Error happened while closing output writer", e);
-                    }
-                    Thread.currentThread().interrupt();
+                    outputWriter.flush();
                 }
+
+            } catch (IOException e) {
+                String errorMessage = "Can not read messages from server. Most probably, this is network error.";
+                logger.error(errorMessage, e);
+                try {
+                    outputWriter.write(errorMessage);
+                } catch (IOException e1) {
+                    logger.error("Error happened while closing output writer", e);
+                }
+                Thread.currentThread().interrupt();
             }
 
             // close resources
