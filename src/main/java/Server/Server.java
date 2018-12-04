@@ -21,47 +21,62 @@ public class Server {
 
     public static void main(String[] args) throws IOException {
         // server will listen on port 8000
-        ServerSocket serverSocket = new ServerSocket(Constants.serverPort);
+        ServerSocket serverSocket = null;
+
+        serverSocket = new ServerSocket(Constants.serverPort);
 
         logger.info(String.format("Server listens to requests on port %s", Integer.toString(Constants.serverPort)));
 
-        WaitForStopCommand waitForStopCommand = new WaitForStopCommand();
-        waitForStopCommand.start();
+        startWaitingForStopCommand();
 
         while (isRunning.get()) {
+
             Socket socket = serverSocket.accept();
 
-            logger.info("New user request received: ", socket);
+            logger.info("New user request received: " + socket);
 
-            ClientHandler clientHandler = new ClientHandler(socket);
+            ClientHandler clientHandler = new ClientHandler(socket, clientHandlers.size() + 1);
 
             clientHandlers.add(clientHandler);
 
-            logger.info(String.format("Saved user №%s to user pool", clientHandlers.size()));
+            logger.info(String.format("Saved user %s to user pool", clientHandler.getNameOrNumber()));
 
             clientHandler.start();
 
-            logger.info(String.format("Ready to work with user №%s", clientHandlers.size()));
+            logger.info(String.format("Ready to work with user %s", clientHandler.getNameOrNumber()));
         }
 
         stopAllConnections();
     }
 
-    public static void stopAllConnections() {
+    private static void stopAllConnections() {
         for (ClientHandler clientHandler : clientHandlers) {
             clientHandler.interrupt();
         }
     }
 
+    private static void startWaitingForStopCommand() {
+        Scanner scanner = new Scanner(System.in);
+        WaitForStopCommand waitForStopCommand = new WaitForStopCommand(scanner);
+        waitForStopCommand.start();
+    }
+
     public static class WaitForStopCommand extends Thread {
+
+        private Scanner scanner;
+
+        WaitForStopCommand(Scanner scanner) {
+            this.scanner = scanner;
+        }
 
         @Override
         public void run() {
-            Scanner sc = new Scanner(System.in);
 
-            if (sc.next().equals("stop")) {
+            if (scanner.next().equals("stop")) {
                 isRunning.set(false);
             }
+
+            scanner.close();
         }
     }
 }

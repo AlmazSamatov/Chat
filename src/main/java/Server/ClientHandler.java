@@ -7,6 +7,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ClientHandler extends Thread {
 
@@ -14,22 +16,30 @@ public class ClientHandler extends Thread {
     private DataInputStream dataInputStream;
     private DataOutputStream dataOutputStream;
     private final Logger logger = LoggerFactory.getLogger(ClientHandler.class);
+    private Queue<String> messagesToSent = new ConcurrentLinkedQueue<>();
+    private SendMessagesToClient sendMessagesToClient;
     private String name;
+    private int number;
 
-    ClientHandler(Socket socket) throws IOException {
+    ClientHandler(Socket socket, int number) throws IOException {
+        this.number = number;
         this.socket = socket;
         dataInputStream = new DataInputStream(socket.getInputStream());
         dataOutputStream = new DataOutputStream(socket.getOutputStream());
 
         // Ask user to enter it's name
         dataOutputStream.writeUTF("Enter your name, please:");
+
+        // run thread, which sends messages to current user
+        sendMessagesToClient = new SendMessagesToClient();
+        sendMessagesToClient.start();
     }
 
     @Override
     public void run() {
-        while (!Thread.currentThread().isInterrupted()) {
 
-            try {
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
                 String msg = dataInputStream.readUTF();
 
                 if (name == null) {
@@ -40,16 +50,16 @@ public class ClientHandler extends Thread {
 
                     if (msg.equals("exit")) {
                         Thread.currentThread().interrupt();
+                        sendMessagesToClient.interrupt();
                         Server.clientHandlers.remove(this);
                         break;
                     }
 
                     sendMessageToOthers(name + ": " + msg);
                 }
-
-            } catch (IOException e) {
-                logger.error("Can not read message from user", e);
             }
+        } catch (IOException e) {
+            logger.error("Can not read message from user", e);
         }
 
         try {
@@ -60,6 +70,14 @@ public class ClientHandler extends Thread {
             logger.error("Error happened while closing resources", e);
         }
 
+    }
+
+    // get name of user or number of user if name is null
+    public String getNameOrNumber() {
+        if (name == null)
+            return String.valueOf(number);
+        else
+            return name;
     }
 
     private void sendMessageToOthers(String msg) {
@@ -75,6 +93,24 @@ public class ClientHandler extends Thread {
     }
 
     private void writeMessage(String msg) throws IOException {
-        dataOutputStream.writeUTF(msg);
+        messagesToSent.add(msg);
+    }
+
+    private class SendMessagesToClient extends Thread {
+
+        @Override
+        public void run() {
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    Thread.sleep(500);
+
+                    if (!messagesToSent.isEmpty())
+                        dataOutputStream.writeUTF(messagesToSent.poll() + '\n');
+
+                }
+            } catch (Exception e) {
+                logger.error("Error while sending message to clint with name: " + name, e);
+            }
+        }
     }
 }
