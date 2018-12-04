@@ -8,6 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ClientHandler extends Thread {
 
@@ -15,6 +16,8 @@ public class ClientHandler extends Thread {
     private DataInputStream dataInputStream;
     private DataOutputStream dataOutputStream;
     private final Logger logger = LoggerFactory.getLogger(ClientHandler.class);
+    private Queue<String> messagesToSent = new ConcurrentLinkedQueue<>();
+    private SendMessagesToClient sendMessagesToClient;
     private String name;
     private int number;
 
@@ -26,6 +29,10 @@ public class ClientHandler extends Thread {
 
         // Ask user to enter it's name
         dataOutputStream.writeUTF("Enter your name, please:");
+
+        // run thread, which sends messages to current user
+        sendMessagesToClient = new SendMessagesToClient();
+        sendMessagesToClient.run();
     }
 
     @Override
@@ -43,6 +50,7 @@ public class ClientHandler extends Thread {
 
                     if (msg.equals("exit")) {
                         Thread.currentThread().interrupt();
+                        sendMessagesToClient.interrupt();
                         Server.clientHandlers.remove(this);
                         break;
                     }
@@ -86,6 +94,24 @@ public class ClientHandler extends Thread {
     }
 
     private void writeMessage(String msg) throws IOException {
-        dataOutputStream.writeUTF(msg);
+        messagesToSent.add(msg);
+    }
+
+    private class SendMessagesToClient extends Thread {
+
+        @Override
+        public void run() {
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    Thread.sleep(500);
+
+                    if (!messagesToSent.isEmpty())
+                        dataOutputStream.writeUTF(messagesToSent.poll());
+
+                }
+            } catch (Exception e) {
+                logger.error("Error while sending message to clint with name: " + name, e);
+            }
+        }
     }
 }
