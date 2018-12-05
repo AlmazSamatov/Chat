@@ -21,9 +21,7 @@ public class Server {
 
     public static void main(String[] args) throws IOException {
         // server will listen on port 8000
-        ServerSocket serverSocket = null;
-
-        serverSocket = new ServerSocket(Constants.serverPort);
+        ServerSocket serverSocket = new ServerSocket(Constants.serverPort);
 
         logger.info(String.format("Server listens to requests on port %s", Integer.toString(Constants.serverPort)));
 

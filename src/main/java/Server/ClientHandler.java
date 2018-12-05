@@ -46,28 +46,30 @@ public class ClientHandler extends Thread {
 
         try {
             while (!Thread.currentThread().isInterrupted()) {
-                String msg = dataInputStream.readUTF();
+                if (dataInputStream.available() > 0) {
+                    String msg = dataInputStream.readUTF();
 
-                if (name == null) {
-                    name = msg;
-                    dataOutputStream.writeUTF("Now you can write messages here.\n");
-                } else {
-                    logger.info(String.format("Received message from user with name %s", name), msg);
+                    if (name == null) {
+                        name = msg;
+                        dataOutputStream.writeUTF("Now you can write messages here.\n");
+                    } else {
+                        logger.info(String.format("Received message from user with name %s", name), msg);
 
-                    // operation call
-                    if (msg.charAt(0) == '/') {
-                        RunOperation runOperation = new RunOperation(msg);
-                        runOperation.start();
+                        // operation call
+                        if (msg.charAt(0) == '/') {
+                            RunOperation runOperation = new RunOperation(msg);
+                            runOperation.start();
+                        }
+
+                        if (msg.equals("exit")) {
+                            Thread.currentThread().interrupt();
+                            sendMessagesToClient.interrupt();
+                            Server.clientHandlers.remove(this);
+                            break;
+                        }
+
+                        sendMessageToOthers(name + ": " + msg);
                     }
-
-                    if (msg.equals("exit")) {
-                        Thread.currentThread().interrupt();
-                        sendMessagesToClient.interrupt();
-                        Server.clientHandlers.remove(this);
-                        break;
-                    }
-
-                    sendMessageToOthers(name + ": " + msg);
                 }
             }
         } catch (IOException e) {
