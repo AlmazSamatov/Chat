@@ -5,8 +5,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
 import java.net.Socket;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Paths;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -28,7 +34,7 @@ public class ClientHandler extends Thread {
         dataOutputStream = new DataOutputStream(socket.getOutputStream());
 
         // Ask user to enter it's name
-        dataOutputStream.writeUTF("Enter your name, please:");
+        dataOutputStream.writeUTF("Enter your name, please: ");
 
         // run thread, which sends messages to current user
         sendMessagesToClient = new SendMessagesToClient();
@@ -47,6 +53,12 @@ public class ClientHandler extends Thread {
                     dataOutputStream.writeUTF("Now you can write messages here.\n");
                 } else {
                     logger.info(String.format("Received message from user with name %s", name), msg);
+
+                    // operation call
+                    if (msg.charAt(0) == '/') {
+                        RunOperation runOperation = new RunOperation(msg);
+                        runOperation.start();
+                    }
 
                     if (msg.equals("exit")) {
                         Thread.currentThread().interrupt();
@@ -111,6 +123,50 @@ public class ClientHandler extends Thread {
             } catch (Exception e) {
                 logger.error("Error while sending message to clint with name: " + name, e);
             }
+        }
+    }
+
+
+    private class RunOperation extends Thread {
+
+        String msg;
+        String operation;
+
+        RunOperation(String msg) {
+            this.msg = msg;
+        }
+
+        @Override
+        public void run() {
+
+            try {
+                msg = msg.replace("/", "");
+                String[] cmd  = msg.split(" ");
+
+                operation = cmd[0];
+
+                cmd[0] = Character.toUpperCase(cmd[0].charAt(0)) + cmd[0].substring(1);
+                String currentPath = String.valueOf(Paths.get("").toAbsolutePath()) + "/jars/" + cmd[0] + ".jar";
+                currentPath = String.valueOf(Paths.get(currentPath));
+                URL[] classLoaderUrls = new URL[]{new File(currentPath).toURI().toURL()};
+                URLClassLoader urlClassLoader = new URLClassLoader(classLoaderUrls);
+
+                Class c = urlClassLoader.loadClass(cmd[0]);
+
+                String msgToUser = (String) c.getDeclaredMethods()[0].invoke(null, (Object) cmd);
+
+                messagesToSent.add("Result of " + operation + " is: " + msgToUser);
+
+                urlClassLoader.close();
+
+            } catch (InvocationTargetException | IllegalAccessException e) {
+                messagesToSent.add("Illegal arguments passed to operation: /" + operation);
+                logger.error("Can not call operation with args from user: " + getNameOrNumber(), e);
+            } catch (ClassNotFoundException | IOException e) {
+                messagesToSent.add("Can not find operation : /" + operation);
+                logger.error("Can not find operation from user: " + getNameOrNumber(), e);
+            }
+
         }
     }
 }
