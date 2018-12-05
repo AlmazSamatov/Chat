@@ -38,7 +38,7 @@ public class Client {
         private DataOutputStream dataOutputStream;
         private Writer outputWriter;
 
-        SendMessage(Scanner scanner, DataOutputStream dataOutputStream, Writer outputWriter) {
+        public SendMessage(Scanner scanner, DataOutputStream dataOutputStream, Writer outputWriter) {
             this.scanner = scanner;
             this.dataOutputStream = dataOutputStream;
             this.outputWriter = outputWriter;
@@ -50,9 +50,11 @@ public class Client {
             try {
 
                 while (!Thread.currentThread().isInterrupted()) {
-                    String msg = scanner.nextLine();
+                    if (scanner.hasNext()) {
+                        String msg = scanner.nextLine();
 
-                    dataOutputStream.writeUTF(msg);
+                        dataOutputStream.writeUTF(msg);
+                    }
                 }
 
             } catch (IOException e) {
@@ -82,7 +84,7 @@ public class Client {
         private DataInputStream dataInputStream;
         private Writer outputWriter;
 
-        GetMessage(DataInputStream dataInputStream, Writer outputWriter) {
+        public GetMessage(DataInputStream dataInputStream, Writer outputWriter) {
             this.dataInputStream = dataInputStream;
             this.outputWriter = outputWriter;
         }
@@ -92,10 +94,12 @@ public class Client {
 
             try {
                 while (!Thread.currentThread().isInterrupted()) {
-                    String msg = dataInputStream.readUTF();
+                    if (dataInputStream.available() > 0) {
+                        String msg = dataInputStream.readUTF();
 
-                    outputWriter.write(msg);
-                    outputWriter.flush();
+                        outputWriter.write(msg);
+                        outputWriter.flush();
+                    }
                 }
 
             } catch (IOException e) {
