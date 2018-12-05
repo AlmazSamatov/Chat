@@ -1,5 +1,5 @@
 ## About project:
-Multithreaded non-blocking chat.
+Multithreaded, non-blocking, fault tolerant chat.
 
 ## How to run:
 *  Run Server.java file in order to run server.
